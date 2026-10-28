@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOSSO KUMAŞ - Yönetici & Takip Paneli</title>
+    
+    <!-- Google Fonts & Tailwind CSS (Modern Endüstriyel Tasarım) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0F172A',
+                        cardBg: '#1E293B',
+                        cardBorder: '#334155',
+                        brandYellow: '#F59E0B',
+                        brandGreen: '#10B981',
+                        brandCyan: '#06B6D4'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Firebase SDK (v9 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-darkBg text-slate-100 font-sans min-h-screen antialiased selection:bg-brandYellow selection:text-black">
+
+    <!-- ================= GİRİŞ EKRANI (LOGIN) ================= -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-cardBg border border-cardBorder p-8 rounded-2xl w-full max-w-md shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-brandYellow text-slate-950 font-black text-2xl mb-3 shadow-lg">
+                    DK
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight" data-i18n="loginTitle">DOSSO KUMAŞ</h1>
+                <p class="text-xs text-slate-400 mt-1" data-i18n="loginSubtitle">Yönetici & Takip Web Portalı</p>
+            </div>
+
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="emailLabel">E-Posta</label>
+                    <input type="email" id="loginEmail" required class="w-full px-4 py-2.5 bg-slate-900 border border-cardBorder rounded-lg text-sm text-white focus:outline-none focus:border-brandYellow transition-colors" placeholder="admin@dossogroup.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="passLabel">Şifre</label>
+                    <input type="password" id="loginPassword" required class="w-full px-4 py-2.5 bg-slate-900 border border-cardBorder rounded-lg text-sm text-white focus:outline-none focus:border-brandYellow transition-colors" placeholder="••••••••">
+                </div>
+                
+                <div id="loginError" class="hidden text-xs text-rose-500 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg text-center"></div>
+
+                <button type="submit" id="loginBtn" class="w-full py-3 bg-brandYellow hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-sm transition-all shadow-md mt-2 flex items-center justify-center gap-2">
+                    <span data-i18n="loginBtn">Sisteme Giriş Yap</span>
+                </button>
+            </form>
+            
+            <p class="text-[11px] text-slate-500 text-center mt-6" data-i18n="loginInfo">
+                Kayıt kapalıdır. Yetkilendirme Firebase Console üzerinden yönetilir.
+            </p>
+        </div>
+    </div>
+
+    <!-- ================= ANA DASHBOARD (GİRİŞ YAPILINCA GÖRÜNÜR) ================= -->
+    <div id="dashboardSection" class="hidden min-h-screen flex flex-col">
+        
+        <!-- Üst Bar (Navbar) -->
+        <header class="bg-cardBg border-b border-cardBorder sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-brandYellow text-slate-950 font-black flex items-center justify-center text-lg shadow">
+                        DK
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                            <span>DOSSO KUMAŞ</span>
+                            <span class="text-[10px] bg-brandYellow/15 text-brandYellow px-2 py-0.5 rounded-full font-semibold border border-brandYellow/30" data-i18n="portalBadge">YÖNETİM & TAKİP</span>
+                        </div>
+                        <div id="userEmailDisplay" class="text-[11px] text-slate-400">admin@dossogroup.com</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Dil Seçici (TR, RU, UZ) -->
+                    <div class="relative">
+                        <select id="langSelector" class="bg-slate-900 border border-cardBorder text-xs text-slate-200 py-1.5 px-3 rounded-lg focus:outline-none focus:border-brandYellow cursor-pointer">
+                            <option value="tr">🇹🇷 Türkçe</option>
+                            <option value="ru">🇷🇺 Русский</option>
+                            <option value="uz">🇺🇿 O'zbekcha</option>
+                        </select>
+                    </div>
+
+                    <!-- Çıkış Butonu -->
+                    <button id="logoutBtn" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors" title="Çıkış">
+                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- İçerik Alanı -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+            
+            <!-- İstatistik Kartları -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-cardBg border border-cardBorder p-4 rounded-xl shadow-sm">
+                    <div class="text-xs text-slate-400 font-medium" data-i18n="statTotalBatches">Toplam Parti</div>
+                    <div id="statTotalBatches" class="text-2xl font-black text-white mt-1">0</div>
+                </div>
+                <div class="bg-cardBg border border-cardBorder p-4 rounded-xl shadow-sm">
+                    <div class="text-xs text-slate-400 font-medium" data-i18n="statTotalSent">Giden Metre (Ketdi)</div>
+                    <div id="statTotalSent" class="text-2xl font-black text-brandYellow mt-1">0.00 mt</div>
+                </div>
+                <div class="bg-cardBg border border-cardBorder p-4 rounded-xl shadow-sm">
+                    <div class="text-xs text-slate-400 font-medium" data-i18n="statTotalReceived">Gelen Metre (Keldi)</div>
+                    <div id="statTotalReceived" class="text-2xl font-black text-brandGreen mt-1">0.00 mt</div>
+                </div>
+                <div class="bg-cardBg border border-cardBorder p-4 rounded-xl shadow-sm">
+                    <div class="text-xs text-slate-400 font-medium" data-i18n="statAvgLoss">Ortalama Sanfor Firesi</div>
+                    <div id="statAvgLoss" class="text-2xl font-black text-rose-400 mt-1">%0.00</div>
+                </div>
+            </div>
+
+            <!-- Filtreler ve Arama Çubuğu -->
+            <div class="bg-cardBg border border-cardBorder p-4 rounded-xl flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <button class="filter-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-brandYellow text-slate-950" data-filter="ALL" data-i18n="filterAll">TÜMÜ</button>
+                    <button class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-slate-300 hover:text-white" data-filter="CEKERDE" data-i18n="filterCeker">ÇEKERDE</button>
+                    <button class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-slate-300 hover:text-white" data-filter="GELDI" data-i18n="filterGeldi">GELDİ</button>
+                    <button class="filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-slate-300 hover:text-white" data-filter="MUSTERIYE_GITTI" data-i18n="filterClient">MÜŞTERİYE</button>
+                </div>
+
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-64">
+                        <input type="text" id="searchInput" class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-cardBorder rounded-lg text-xs text-white focus:outline-none focus:border-brandYellow placeholder:text-slate-500" placeholder="Parti No, İrsaliye ara...">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                    </div>
+
+                    <button id="exportExcelBtn" class="px-4 py-2 bg-brandGreen hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-2 transition-all shadow shrink-0">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                        <span data-i18n="exportExcel">Excel İndir</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Parti Listesi (Tablo) -->
+            <div class="bg-cardBg border border-cardBorder rounded-xl overflow-hidden shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900/60 text-slate-400 font-semibold border-b border-cardBorder">
+                            <tr>
+                                <th class="p-3.5" data-i18n="thBatch">Parti No</th>
+                                <th class="p-3.5" data-i18n="thInvoice">İrsaliye No</th>
+                                <th class="p-3.5" data-i18n="thStatus">Durum</th>
+                                <th class="p-3.5 text-center" data-i18n="thRolls">Top</th>
+                                <th class="p-3.5 text-right" data-i18n="thSent">Giden (mt)</th>
+                                <th class="p-3.5 text-right" data-i18n="thReceived">Gelen (mt)</th>
+                                <th class="p-3.5 text-right" data-i18n="thLoss">Fire (%)</th>
+                                <th class="p-3.5 text-center" data-i18n="thDate">Son Güncelleme</th>
+                                <th class="p-3.5 text-center" data-i18n="thAction">Detay</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchTableBody" class="divide-y divide-cardBorder">
+                            <!-- JS ile canlı doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="noDataRow" class="hidden p-8 text-center text-slate-500 text-xs" data-i18n="noData">
+                    Kayıtlı parti bulunamadı.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= PARTİ DETAY MODAL (AÇILIR PENCERE) ================= -->
+    <div id="detailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div class="bg-cardBg border border-cardBorder rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            
+            <div class="p-5 border-b border-cardBorder flex items-center justify-between bg-slate-900/40">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 id="modalBatchNo" class="text-lg font-bold text-white tracking-tight">PRT-0000</h2>
+                        <span id="modalStatusBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold">DURUM</span>
+                    </div>
+                    <div id="modalMeta" class="text-xs text-slate-400 mt-0.5">İrsaliye: 8480601 • Operatör: -</div>
+                </div>
+                <button id="closeModalBtn" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-5 flex-1 overflow-y-auto space-y-4">
+                <div class="overflow-x-auto border border-cardBorder rounded-lg">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900 text-slate-400 font-semibold">
+                            <tr>
+                                <th class="p-2.5 text-center">Top #</th>
+                                <th class="p-2.5">Model (Ceplik)</th>
+                                <th class="p-2.5">Kumaş Rengi</th>
+                                <th class="p-2.5 text-right">Giden (mt)</th>
+                                <th class="p-2.5 text-right">Gelen (mt)</th>
+                                <th class="p-2.5 text-right">Fire (mt)</th>
+                                <th class="p-2.5 text-right">Fire (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalRollsBody" class="divide-y divide-cardBorder bg-slate-900/30">
+                            <!-- JS ile doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-cardBorder bg-slate-900/40 flex justify-end">
+                <button id="closeModalBtnBottom" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg text-xs transition-colors" data-i18n="close">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= UYGULAMA MANTIĞI & FIREBASE ================= -->
+    <script>
+        // 1. FIREBASE BAĞLANTISI (Android ile AYNI Proje)
+        const firebaseConfig = {
+            databaseURL: "https://dossokumas-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // 2. ÇOKLU DİL SÖZLÜĞÜ (TR, RU, UZ)
+        const i18n = {
+            tr: {
+                loginTitle: "DOSSO KUMAŞ",
+                loginSubtitle: "Yönetici & Takip Web Portalı",
+                emailLabel: "E-Posta",
+                passLabel: "Şifre",
+                loginBtn: "Sisteme Giriş Yap",
+                loginInfo: "Kayıt kapalıdır. Yetkilendirme Firebase Console üzerinden yönetilir.",
+                portalBadge: "YÖNETİM & TAKİP",
+                statTotalBatches: "Toplam Parti",
+                statTotalSent: "Giden Metre (Ketdi)",
+                statTotalReceived: "Gelen Metre (Keldi)",
+                statAvgLoss: "Ortalama Sanfor Firesi",
+                filterAll: "TÜMÜ",
+                filterCeker: "ÇEKERDE",
+                filterGeldi: "GELDİ",
+                filterClient: "MÜŞTERİYE",
+                exportExcel: "Excel İndir",
+                thBatch: "Parti No",
+                thInvoice: "İrsaliye No",
+                thStatus: "Durum",
+                thRolls: "Top",
+                thSent: "Giden (mt)",
+                thReceived: "Gelen (mt)",
+                thLoss: "Fire (%)",
+                thDate: "Son Güncelleme",
+                thAction: "Detay",
+                noData: "Kayıtlı parti bulunamadı.",
+                close: "Kapat"
+            },
+            ru: {
+                loginTitle: "DOSSO KUMAŞ",
+                loginSubtitle: "Веб-портал мониторинга и отчетов",
+                emailLabel: "Эл. почта",
+                passLabel: "Пароль",
+                loginBtn: "Войти в систему",
+                loginInfo: "Регистрация закрыта. Управление через Firebase Console.",
+                portalBadge: "УПРАВЛЕНИЕ И УЧЕТ",
+                statTotalBatches: "Всего партий",
+                statTotalSent: "Отправлено (м)",
+                statTotalReceived: "Принято (м)",
+                statAvgLoss: "Средняя усадка",
+                filterAll: "ВСЕ",
+                filterCeker: "НА УСАДКЕ",
+                filterGeldi: "ПРИНЯТО",
+                filterClient: "КЛИЕНТУ",
+                exportExcel: "Скачать Excel",
+                thBatch: "Номер партии",
+                thInvoice: "Накладная №",
+                thStatus: "Статус",
+                thRolls: "Рул.",
+                thSent: "Ушло (м)",
+                thReceived: "Пришло (м)",
+                thLoss: "Усадка (%)",
+                thDate: "Обновлено",
+                thAction: "Детали",
+                noData: "Партии не найдены.",
+                close: "Закрыть"
+            },
+            uz: {
+                loginTitle: "DOSSO KUMAŞ",
+                loginSubtitle: "Boshqaruv & Monitoring Portali",
+                emailLabel: "Elektron pochta",
+                passLabel: "Parol",
+                loginBtn: "Tizimga Kirish",
+                loginInfo: "Ro'yxatdan o'tish yopiq. Foydalanuvchilar Firebase'da boshqariladi.",
+                portalBadge: "BOSHQARUV VA NAZORAT",
+                statTotalBatches: "Jami Partiyalar",
+                statTotalSent: "Ketgan Metr (Ketdi)",
+                statTotalReceived: "Kelgan Metr (Keldi)",
+                statAvgLoss: "O'rtacha Sanfor Firasi",
+                filterAll: "BARCHASI",
+                filterCeker: "SANFORDA",
+                filterGeldi: "KELDI",
+                filterClient: "MIJOZGA",
+                exportExcel: "Excelga Yuklash",
+                thBatch: "Partiya Raqami",
+                thInvoice: "Yuk Xati (Nakladnoy)",
+                thStatus: "Holati",
+                thRolls: "Top",
+                thSent: "Ketdi (m)",
+                thReceived: "Keldi (m)",
+                thLoss: "Fira (%)",
+                thDate: "Oxirgi yangilanish",
+                thAction: "Batafsil",
+                noData: "Partiyalar topilmadi.",
+                close: "Yopish"
+            }
+        };
+
+        let currentLang = 'tr';
+        let allBatches = [];
+        let currentFilter = 'ALL';
+        let searchQuery = '';
+
+        // Dil Değiştirme
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) el.textContent = i18n[lang][key];
+            });
+            renderTable();
+        }
+
+        document.getElementById('langSelector').addEventListener('change', (e) => {
+            setLanguage(e.target.value);
+        });
+
+        // 3. AUTH (GİRİŞ/ÇIKIŞ)
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('dashboardSection').classList.remove('hidden');
+                document.getElementById('userEmailDisplay').textContent = user.email;
+                listenFirebaseBatches();
+            } else {
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.add('hidden');
+            }
+            lucide.createIcons();
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPassword').value;
+            const errEl = document.getElementById('loginError');
+
+            errEl.classList.add('hidden');
+            auth.signInWithEmailAndPassword(email, pass).catch(err => {
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+            });
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // 4. CANLI FIREBASE VERİ AKIŞI (SAHTE VERİLERİ SÜZEN FİLTRE)
+        function listenFirebaseBatches() {
+            db.ref('batches').on('value', snapshot => {
+                const data = snapshot.val();
+                allBatches = [];
+
+                if (data) {
+                    Object.values(data).forEach(batch => {
+                        // SADECE geçerli partileri al (Android'deki koruma kalkanıyla aynı)
+                        if (batch && batch.batchNo && batch.items) {
+                            allBatches.push(batch);
+                        }
+                    });
+                }
+
+                // Yeniden eskiye sırala
+                allBatches.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+                updateStats();
+                renderTable();
+            });
+        }
+
+        // İstatistikleri Hesapla
+        function updateStats() {
+            const total = allBatches.length;
+            const totalSent = allBatches.reduce((acc, b) => acc + (b.totalSentMeters || 0), 0);
+            const totalRec = allBatches.reduce((acc, b) => acc + (b.totalReceivedMeters || 0), 0);
+            const avgLoss = total > 0 ? (allBatches.reduce((acc, b) => acc + (b.averageShrinkagePercent || 0), 0) / total) : 0;
+
+            document.getElementById('statTotalBatches').textContent = total;
+            document.getElementById('statTotalSent').textContent = totalSent.toFixed(2) + ' mt';
+            document.getElementById('statTotalReceived').textContent = totalRec.toFixed(2) + ' mt';
+            document.getElementById('statAvgLoss').textContent = '%' + avgLoss.toFixed(2);
+        }
+
+        // Durum Rozeti Rengi
+        function getStatusBadge(status) {
+            if (status === 'GELDI') {
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">GELDİ - KELDİ</span>';
+            } else if (status === 'MUSTERIYE_GITTI') {
+                return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">MÜŞTERİYE GİTTİ</span>';
+            }
+            return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">ÇEKERDE</span>';
+        }
+
+        // Tabloyu Çiz
+        function renderTable() {
+            const tbody = document.getElementById('batchTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = allBatches.filter(b => {
+                const matchFilter = currentFilter === 'ALL' || b.status === currentFilter;
+                const matchSearch = searchQuery === '' || 
+                    (b.batchNo && b.batchNo.toLowerCase().includes(searchQuery)) ||
+                    (b.invoiceNo && b.invoiceNo.toLowerCase().includes(searchQuery));
+                return matchFilter && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                document.getElementById('noDataRow').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('noDataRow').classList.add('hidden');
+
+            filtered.forEach(b => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-900/40 transition-colors cursor-pointer';
+                const dateStr = b.updatedAt ? new Date(b.updatedAt).toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '-';
+
+                tr.innerHTML = `
+                    <td class="p-3.5 font-bold text-white">${b.batchNo}</td>
+                    <td class="p-3.5 text-slate-300">${b.invoiceNo || '-'}</td>
+                    <td class="p-3.5">${getStatusBadge(b.status)}</td>
+                    <td class="p-3.5 text-center font-semibold text-slate-300">${(b.items || []).length}</td>
+                    <td class="p-3.5 text-right font-medium text-brandYellow">${(b.totalSentMeters || 0).toFixed(2)}</td>
+                    <td class="p-3.5 text-right font-medium text-brandGreen">${(b.totalReceivedMeters || 0).toFixed(2)}</td>
+                    <td class="p-3.5 text-right font-bold ${b.averageShrinkagePercent > 4 ? 'text-rose-400' : 'text-slate-300'}">%${(b.averageShrinkagePercent || 0).toFixed(2)}</td>
+                    <td class="p-3.5 text-center text-slate-400">${dateStr}</td>
+                    <td class="p-3.5 text-center">
+                        <button class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-medium text-[11px] transition-colors">
+                            İncele
+                        </button>
+                    </td>
+                `;
+
+                tr.addEventListener('click', () => openDetailModal(b));
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Filtre Butonları Tıklamaları
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.className = 'filter-btn px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-slate-900 text-slate-300 hover:text-white';
+                });
+                btn.className = 'filter-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-brandYellow text-slate-950';
+                currentFilter = btn.getAttribute('data-filter');
+                renderTable();
+            });
+        });
+
+        // Arama Kutusu
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            renderTable();
+        });
+
+        // 5. DETAY MODALINI AÇ
+        function openDetailModal(batch) {
+            document.getElementById('modalBatchNo').textContent = batch.batchNo;
+            document.getElementById('modalStatusBadge').innerHTML = getStatusBadge(batch.status);
+            document.getElementById('modalMeta').textContent = `İrsaliye: ${batch.invoiceNo || '-'} • Operatör: ${batch.operatorEmail || '-'}`;
+
+            const rollsBody = document.getElementById('modalRollsBody');
+            rollsBody.innerHTML = '';
+
+            (batch.items || []).forEach(top => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2.5 text-center font-bold text-white">#${top.topNo}</td>
+                    <td class="p-2.5 font-medium text-slate-200">${top.model}</td>
+                    <td class="p-2.5 text-slate-400">${top.color}</td>
+                    <td class="p-2.5 text-right text-brandYellow font-medium">${(top.sentMeter || 0).toFixed(2)}</td>
+                    <td class="p-2.5 text-right text-brandGreen font-medium">${top.receivedMeter !== null && top.receivedMeter !== undefined ? Number(top.receivedMeter).toFixed(2) : '-'}</td>
+                    <td class="p-2.5 text-right font-medium text-slate-300">${(top.shrinkageMeter || 0).toFixed(2)}</td>
+                    <td class="p-2.5 text-right font-bold ${top.shrinkagePercent > 4 ? 'text-rose-400' : 'text-slate-300'}">%${(top.shrinkagePercent || 0).toFixed(2)}</td>
+                `;
+                rollsBody.appendChild(tr);
+            });
+
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        // Modal Kapatma
+        document.getElementById('closeModalBtn').addEventListener('click', () => document.getElementById('detailModal').classList.add('hidden'));
+        document.getElementById('closeModalBtnBottom').addEventListener('click', () => document.getElementById('detailModal').classList.add('hidden'));
+
+        // 6. EXCEL'E AKTARMA (HÜCRE HÜCRE AYRI, ASLA BİRLEŞTİRİLMEDEN)
+        document.getElementById('exportExcelBtn').addEventListener('click', () => {
+            if (allBatches.length === 0) return alert('Dışa aktarılacak veri yok.');
+
+            const headers = ["Parti No", "İrsaliye No", "Durum", "Top No", "Model (Ceplik)", "Kumaş Rengi", "Giden (mt)", "Gelen (mt)", "Fire (mt)", "Fire (%)", "Operatör", "Kayıt Tarihi"];
+            let csvContent = "\uFEFF" + headers.join(";") + "\n"; // UTF-8 BOM ile Excel Türkçe karakterleri korur
+
+            allBatches.forEach(b => {
+                const dateStr = b.updatedAt ? new Date(b.updatedAt).toLocaleString('tr-TR') : '-';
+                (b.items || []).forEach(top => {
+                    const row = [
+                        b.batchNo,
+                        b.invoiceNo || '-',
+                        b.status,
+                        top.topNo,
+                        top.model,
+                        top.color,
+                        (top.sentMeter || 0).toFixed(2),
+                        top.receivedMeter !== null && top.receivedMeter !== undefined ? Number(top.receivedMeter).toFixed(2) : '0.00',
+                        (top.shrinkageMeter || 0).toFixed(2),
+                        (top.shrinkagePercent || 0).toFixed(2),
+                        b.operatorEmail || '-',
+                        dateStr
+                    ];
+                    csvContent += row.join(";") + "\n";
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `DOSSO_KUMAS_Rapor_${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
