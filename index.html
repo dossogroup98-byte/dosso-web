@@ -235,8 +235,12 @@
     <script>
         // 1. FIREBASE BAĞLANTISI (Android ile AYNI Proje)
         const firebaseConfig = {
-            databaseURL: "https://dossokumas-default-rtdb.europe-west1.firebasedatabase.app"
-        };
+      apiKey: "AIzaSyDd2x1NmopletX5jipDopYvAJuqFlavoFA",
+      authDomain: "dossokumas.firebaseapp.com",
+      databaseURL: "https://dossokumas-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "dossokumas",
+      storageBucket: "dossokumas.firebasestorage.app"
+      };
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.database();
